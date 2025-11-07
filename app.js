@@ -1,5 +1,8 @@
 
 const express = require('express');
+const cors = require('cors')
+const swaggerUi = require('swagger-ui-express')
+const openapi = require('./openapi.json')
 const app = express();
 const itemModel = require('./models/item')
 
@@ -9,14 +12,12 @@ app.use((req, res, next) => {
 	next();
 });
 
-// Lightweight CORS middleware so the React dev server (different origin) can call this API
-app.use((req, res, next) => {
-	res.header('Access-Control-Allow-Origin', '*')
-	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
-	res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-	if (req.method === 'OPTIONS') return res.sendStatus(200)
-	next()
-})
+// CORS: allow any origin (wildcard). Using the `cors` package makes this explicit
+// and avoids subtle header ordering issues.
+app.use(cors({ origin: '*' }))
+
+// Swagger UI - serves OpenAPI docs at /api-docs
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapi))
 
 // Parse JSON bodies (for POST requests)
 app.use(express.json());
@@ -105,6 +106,17 @@ app.delete('/items/:id', async (req, res) => {
 		console.error('DELETE /items/:id error', err)
 		res.status(500).json({ error: 'Internal server error' })
 	}
+})
+
+// GET /NumItems - return the number of items in the database
+app.get('/NumItems', async (req, res) => {
+	try {
+		// Use the exposed Sequelize Model to perform a fast COUNT
+		const url = `http://www.randomnumberapi.com/api/v1.0/random?min=100&max=1000&count=5`
+		const response = await fetch(url)
+		res.json(response.json())
+	}
+	catch(err) {}
 })
 
 const PORT = 3000;
